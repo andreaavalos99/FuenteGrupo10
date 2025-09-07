@@ -7,8 +7,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.LocalDateTime;
 
-@Entity
 @Data
+@Entity
 public class Coleccion {
 
     public Coleccion(String nombre, String descripcion) {

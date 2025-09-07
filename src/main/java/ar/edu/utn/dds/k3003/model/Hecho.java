@@ -12,8 +12,8 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Entity
 @Data
+@Entity
 @AllArgsConstructor
 public class Hecho {
     @Id

@@ -41,7 +41,7 @@ public class Fachada implements FachadaFuente {
         if (this.coleccionRepo.findById(coleccionDTO.nombre()).isPresent()) {
             throw new IllegalArgumentException(coleccionDTO.nombre() + " ya existe");
         }
-        val coleccion = new Coleccion(coleccionDTO.nombre(), coleccionDTO.descripcion());
+        Coleccion coleccion = new Coleccion(coleccionDTO.nombre(), coleccionDTO.descripcion());
         this.coleccionRepo.save(coleccion);
         return new ColeccionDTO(coleccion.getNombre(), coleccion.getDescripcion());
     }
