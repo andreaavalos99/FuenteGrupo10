@@ -7,8 +7,10 @@ import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
 import ar.edu.utn.dds.k3003.facades.dtos.PdIDTO;
 import ar.edu.utn.dds.k3003.model.Coleccion;
 import ar.edu.utn.dds.k3003.model.Hecho;
-import ar.edu.utn.dds.k3003.repository.*;
-
+import ar.edu.utn.dds.k3003.repository.ColeccionRepository;
+import ar.edu.utn.dds.k3003.repository.HechoRepository;
+import ar.edu.utn.dds.k3003.repository.InMemoryColeccionRepo;
+import ar.edu.utn.dds.k3003.repository.InMemoryHechoRepo;
 import lombok.Data;
 import lombok.val;
 
@@ -16,6 +18,8 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +28,7 @@ public class Fachada implements FachadaFuente {
     private ColeccionRepository coleccionRepo;
     private HechoRepository hechoRepo;
     private FachadaProcesadorPdI procesadorPdI;
+	private static final Logger logger = LoggerFactory.getLogger(Fachada.class);
 
 
     @Autowired
@@ -58,6 +63,7 @@ public class Fachada implements FachadaFuente {
 
     @Override
     public HechoDTO agregar(HechoDTO hechoDTO) {
+    	logger.info("Se inicio la funcion agregar Hecho");
         if (Objects.equals(hechoDTO.nombreColeccion().trim(), "")) {
             throw new IllegalArgumentException(hechoDTO.id() + " no se paso nombre de coleccion");
         }
@@ -67,6 +73,8 @@ public class Fachada implements FachadaFuente {
             throw new IllegalArgumentException(hechoDTO.nombreColeccion() + " no existe coleccion con ese nombre");
         }
         */
+        HechoDTO retornable = null ;
+        try {
         if (this.coleccionRepo.findById(hechoDTO.id()).isPresent()) {
             throw new IllegalArgumentException(hechoDTO.id() + " ya existe");
         }
@@ -82,7 +90,7 @@ public class Fachada implements FachadaFuente {
                         hechoDTO.origen());
         // guardo en el repo y devuelvo el dto
         val resultadoHecho = hechoRepo.save(hecho);
-        return new HechoDTO(
+        retornable =  new HechoDTO(
                 resultadoHecho.getId().toString(),
                 resultadoHecho.getNombreColeccion(),
                 resultadoHecho.getTitulo(),
@@ -91,6 +99,10 @@ public class Fachada implements FachadaFuente {
                 resultadoHecho.getUbicacion(),
                 resultadoHecho.getFecha(),
                 resultadoHecho.getOrigen());
+        }catch(Exception e) {
+        	logger.error(e.getMessage());
+        }
+        return retornable;
     }
 
     @Override
