@@ -45,7 +45,7 @@ public class FuenteTest {
     @DisplayName("Agregar coleccion")
     void testAgregarColeccion() {
         fuente.agregar(new ColeccionDTO(UNA_COL, DESCRIPCION));
-        val col = fuente.buscarColeccionXId(UNA_COL);
+        ColeccionDTO col = fuente.buscarColeccionXId(UNA_COL);
 
         assertEquals(UNA_COL, col.nombre());
     }
