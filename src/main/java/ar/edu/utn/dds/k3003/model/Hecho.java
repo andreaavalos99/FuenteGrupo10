@@ -8,6 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +17,8 @@ import java.util.List;
 @Data
 @Entity
 @AllArgsConstructor
+@Getter
+@Setter
 public class Hecho {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
