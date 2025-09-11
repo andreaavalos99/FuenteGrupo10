@@ -10,7 +10,5 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EnableJpaRepositories(basePackages = "ar.edu.utn.dds.k3003.repository")
 @EntityScan(basePackages = "ar.edu.utn.dds.k3003.model")
 public class WebApp {
-    public static void main(String[] args) {
-        SpringApplication.run(WebApp.class, args);
-    }
+    public static void main(String[] args) { SpringApplication.run(WebApp.class, args); }
 }

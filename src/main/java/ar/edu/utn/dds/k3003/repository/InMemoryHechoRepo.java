@@ -5,7 +5,7 @@ import ar.edu.utn.dds.k3003.model.Hecho;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
+/*
 public class InMemoryHechoRepo implements HechoRepository {
     private List<Hecho> hechos;
     private Integer countId;
@@ -32,3 +32,6 @@ public class InMemoryHechoRepo implements HechoRepository {
         return this.hechos;
     }
 }
+
+
+ */

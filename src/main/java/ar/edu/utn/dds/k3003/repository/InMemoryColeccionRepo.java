@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
+/*
 @Repository
 @Profile("test")
 public class InMemoryColeccionRepo implements ColeccionRepository {
@@ -35,3 +35,5 @@ public class InMemoryColeccionRepo implements ColeccionRepository {
         return new ArrayList<>(colecciones);
     }
 }
+
+ */

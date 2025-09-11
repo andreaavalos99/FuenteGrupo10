@@ -2,159 +2,164 @@ package ar.edu.utn.dds.k3003.app;
 
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.FachadaProcesadorPdI;
-import ar.edu.utn.dds.k3003.facades.dtos.ColeccionDTO;
-import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
-import ar.edu.utn.dds.k3003.facades.dtos.PdIDTO;
-import ar.edu.utn.dds.k3003.model.Coleccion;
-import ar.edu.utn.dds.k3003.model.Hecho;
+import ar.edu.utn.dds.k3003.facades.dtos.*;
+import ar.edu.utn.dds.k3003.model.*;
 import ar.edu.utn.dds.k3003.repository.ColeccionRepository;
 import ar.edu.utn.dds.k3003.repository.HechoRepository;
-import ar.edu.utn.dds.k3003.repository.InMemoryColeccionRepo;
-import ar.edu.utn.dds.k3003.repository.InMemoryHechoRepo;
-import lombok.Data;
-import lombok.val;
-
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.Timer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.*;
+import java.util.NoSuchElementException;
+
+@Slf4j
 @Service
+@Transactional
 public class Fachada implements FachadaFuente {
-    private ColeccionRepository coleccionRepo;
-    private HechoRepository hechoRepo;
-    private FachadaProcesadorPdI procesadorPdI;
-	private static final Logger logger = LoggerFactory.getLogger(Fachada.class);
 
+    private final ColeccionRepository coleccionRepo;
+    private final HechoRepository hechoRepo;
+
+    private FachadaProcesadorPdI procesadorPdI;
+
+    private final Counter coleccionesCreadas;
+    private final Counter hechosCreados;
+    private final Counter erroresDominio;
+    private final Timer   tiempoAltaHecho;
 
     @Autowired
-    public Fachada(ColeccionRepository coleccionRepository, HechoRepository hechoRepository) {
+    public Fachada(ColeccionRepository coleccionRepository,
+                   HechoRepository hechoRepository,
+                   MeterRegistry meterRegistry) {
         this.coleccionRepo = coleccionRepository;
         this.hechoRepo = hechoRepository;
-    }
-    public Fachada(){
-        this.coleccionRepo = new InMemoryColeccionRepo();
-        this.hechoRepo = new InMemoryHechoRepo();
+
+        this.coleccionesCreadas = Counter.builder("fuentes.colecciones.creadas")
+                .description("Cantidad de colecciones creadas").register(meterRegistry);
+
+        this.hechosCreados = Counter.builder("fuentes.hechos.creados")
+                .description("Cantidad de hechos creados").register(meterRegistry);
+
+        this.erroresDominio = Counter.builder("fuentes.errores")
+                .description("Errores de negocio en Fuentes").register(meterRegistry);
+
+        this.tiempoAltaHecho = Timer.builder("fuentes.hechos.alta.tiempo")
+                .description("Tiempo de alta de hecho").register(meterRegistry);
     }
 
     @Override
-    public ColeccionDTO agregar(ColeccionDTO coleccionDTO) {
-        if (this.coleccionRepo.findById(coleccionDTO.nombre()).isPresent()) {
-            throw new IllegalArgumentException(coleccionDTO.nombre() + " ya existe");
+    public ColeccionDTO agregar(ColeccionDTO dto) {
+        if (dto == null || dto.nombre() == null || dto.nombre().isBlank()) {
+            erroresDominio.increment();
+            throw new IllegalArgumentException("Nombre de colección inválido");
         }
-        Coleccion coleccion = new Coleccion(coleccionDTO.nombre(), coleccionDTO.descripcion());
-        this.coleccionRepo.save(coleccion);
-        return new ColeccionDTO(coleccion.getNombre(), coleccion.getDescripcion());
+        if (coleccionRepo.findById(dto.nombre()).isPresent()) {
+            erroresDominio.increment();
+            throw new IllegalArgumentException(dto.nombre() + " ya existe");
+        }
+        var c = new Coleccion(dto.nombre(), dto.descripcion(), null);
+        coleccionRepo.save(c);
+        coleccionesCreadas.increment();
+        return new ColeccionDTO(c.getNombre(), c.getDescripcion());
     }
 
-    @Override
-    public ColeccionDTO buscarColeccionXId(String coleccionId) throws NoSuchElementException {
-        val coleccionOptional = this.coleccionRepo.findById(coleccionId);
-        if (coleccionOptional.isEmpty()) {
-            throw new NoSuchElementException(coleccionId + " no existe");
-        }
-        val coleccion = coleccionOptional.get();
-        return new ColeccionDTO(coleccion.getNombre(), coleccion.getDescripcion());
+    @Override @Transactional(readOnly = true)
+    public ColeccionDTO buscarColeccionXId(String id) {
+        var c = coleccionRepo.findById(id).orElseThrow(() -> new NoSuchElementException(id + " no existe"));
+        return new ColeccionDTO(c.getNombre(), c.getDescripcion());
     }
 
-    @Override
-    public HechoDTO agregar(HechoDTO hechoDTO) {
-    	logger.info("Se inicio la funcion agregar Hecho");
-        if (Objects.equals(hechoDTO.nombreColeccion().trim(), "")) {
-            throw new IllegalArgumentException(hechoDTO.id() + " no se paso nombre de coleccion");
-        }
-        /*
-        //al añadir un hecho valido que exista una coleccion con el nombre de coleccion que tiene el hecho
-        if (coleccionRepo.findById(hechoDTO.nombreColeccion()).isEmpty()) {
-            throw new IllegalArgumentException(hechoDTO.nombreColeccion() + " no existe coleccion con ese nombre");
-        }
-        */
-        HechoDTO retornable = null ;
-        try {
-        if (this.coleccionRepo.findById(hechoDTO.id()).isPresent()) {
-            throw new IllegalArgumentException(hechoDTO.id() + " ya existe");
-        }
-        Hecho hecho =
-                new Hecho(
-                        null,
-                        hechoDTO.nombreColeccion(),
-                        hechoDTO.titulo(),
-                        hechoDTO.etiquetas(),
-                        hechoDTO.categoria(),
-                        hechoDTO.ubicacion(),
-                        hechoDTO.fecha(),
-                        hechoDTO.origen());
-        // guardo en el repo y devuelvo el dto
-        val resultadoHecho = hechoRepo.save(hecho);
-        retornable =  new HechoDTO(
-                resultadoHecho.getId().toString(),
-                resultadoHecho.getNombreColeccion(),
-                resultadoHecho.getTitulo(),
-                resultadoHecho.getEtiquetas(),
-                resultadoHecho.getCategoria(),
-                resultadoHecho.getUbicacion(),
-                resultadoHecho.getFecha(),
-                resultadoHecho.getOrigen());
-        }catch(Exception e) {
-        	logger.error(e.getMessage());
-        }
-        return retornable;
-    }
-
-    @Override
-    public HechoDTO buscarHechoXId(String hechoId) throws NoSuchElementException {
-        val hechoOptional = this.hechoRepo.findById(hechoId);
-        if (hechoOptional.isEmpty()) {
-            throw new NoSuchElementException(hechoId + " no existe");
-        }
-        val resultadoHecho = hechoOptional.get();
-        return new HechoDTO(
-                resultadoHecho.getId().toString(),
-                resultadoHecho.getNombreColeccion(),
-                resultadoHecho.getTitulo(),
-                resultadoHecho.getEtiquetas(),
-                resultadoHecho.getCategoria(),
-                resultadoHecho.getUbicacion(),
-                resultadoHecho.getFecha(),
-                resultadoHecho.getOrigen());
-    }
-
-    @Override
-    public List<HechoDTO> buscarHechosXColeccion(String s) throws NoSuchElementException {
-        val coleccionOptional = this.coleccionRepo.findById(s);
-        if (coleccionOptional.isEmpty()) {
-            throw new NoSuchElementException(s + " no existe coleccion con ese nombre");
-        }
-        val hechos = this.hechoRepo.findAll();
-        return hechos.stream()
-                .filter(hecho -> hecho.getNombreColeccion().equals(s))
-                .map(hecho -> new HechoDTO(
-                        hecho.getId().toString(),
-                        hecho.getNombreColeccion(),
-                        hecho.getTitulo(),
-                        hecho.getEtiquetas(),
-                        hecho.getCategoria(),
-                        hecho.getUbicacion(),
-                        hecho.getFecha(),
-                        hecho.getOrigen()))
+    @Override @Transactional(readOnly = true)
+    public List<ColeccionDTO> colecciones() {
+        return coleccionRepo.findAll().stream()
+                .map(c -> new ColeccionDTO(c.getNombre(), c.getDescripcion()))
                 .toList();
     }
 
     @Override
-    public void setProcesadorPdI(FachadaProcesadorPdI fachadaProcesadorPdI) {
-        this.procesadorPdI = fachadaProcesadorPdI;
+    public HechoDTO agregar(HechoDTO dto) {
+        return tiempoAltaHecho.record(() -> {
+            if (dto == null || dto.nombreColeccion() == null || dto.nombreColeccion().isBlank()) {
+                erroresDominio.increment();
+                throw new IllegalArgumentException("No se pasó nombre de colección");
+            }
+            coleccionRepo.findById(dto.nombreColeccion()).orElseThrow(
+                    () -> new IllegalArgumentException(dto.nombreColeccion() + " no existe colección con ese nombre")
+            );
+
+            try {
+                var h = new Hecho(
+                        null,
+                        dto.nombreColeccion(),
+                        dto.titulo(),
+                        dto.etiquetas(),
+                        dto.categoria(),
+                        dto.ubicacion(),
+                        dto.fecha(),
+                        dto.origen(),
+                        EstadoHecho.ACTIVO
+                );
+                var g = hechoRepo.save(h);
+                hechosCreados.increment();
+                return new HechoDTO(
+                        g.getId().toString(), g.getNombreColeccion(), g.getTitulo(), g.getEtiquetas(),
+                        g.getCategoria(), g.getUbicacion(), g.getFecha(), g.getOrigen()
+                );
+            } catch (RuntimeException e) {
+                erroresDominio.increment();
+                log.error("Error al dar de alta Hecho", e);
+                throw e;
+            }
+        });
     }
 
-    @Override
-    public PdIDTO agregar(PdIDTO pdIDTO) throws IllegalStateException {
-        return procesadorPdI.procesar(pdIDTO);
+    @Override @Transactional(readOnly = true)
+    public HechoDTO buscarHechoXId(String hechoId) {
+        Integer id = Integer.valueOf(hechoId); // 👈 convertir a Integer
+        var h = hechoRepo.findById(id).orElseThrow(() -> new NoSuchElementException(hechoId + " no existe"));
+        return new HechoDTO(
+                h.getId().toString(), h.getNombreColeccion(), h.getTitulo(), h.getEtiquetas(),
+                h.getCategoria(), h.getUbicacion(), h.getFecha(), h.getOrigen()
+        );
     }
-    @Override
-    public List<ColeccionDTO> colecciones(){
-        return this.coleccionRepo.findAll().stream().map(coleccion -> new ColeccionDTO(coleccion.getNombre(), coleccion.getDescripcion()) ).toList();
+
+    @Override @Transactional(readOnly = true)
+    public List<HechoDTO> buscarHechosXColeccion(String nombreColeccion) {
+        coleccionRepo.findById(nombreColeccion).orElseThrow(
+                () -> new NoSuchElementException(nombreColeccion + " no existe coleccion con ese nombre")
+        );
+        return hechoRepo.findByNombreColeccionAndEstado(nombreColeccion, EstadoHecho.ACTIVO)
+                .stream().map(h -> new HechoDTO(
+                        h.getId().toString(), h.getNombreColeccion(), h.getTitulo(), h.getEtiquetas(),
+                        h.getCategoria(), h.getUbicacion(), h.getFecha(), h.getOrigen()
+                )).toList();
     }
+
+    public HechoDTO actualizarEstadoHecho(String hechoId, String estadoTexto) {
+        Integer id = Integer.valueOf(hechoId); // 👈 convertir a Integer
+        var hecho = hechoRepo.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Hecho " + hechoId + " no existe"));
+
+        var nuevo = switch (estadoTexto == null ? "" : estadoTexto.trim().toLowerCase()) {
+            case "borrado", "censurado" -> EstadoHecho.CENSURADO;
+            case "activo" -> EstadoHecho.ACTIVO;
+            default -> { erroresDominio.increment(); throw new IllegalArgumentException("estado inválido: " + estadoTexto); }
+        };
+
+        hecho.setEstado(nuevo);
+        var g = hechoRepo.save(hecho);
+
+        return new HechoDTO(
+                g.getId().toString(), g.getNombreColeccion(), g.getTitulo(), g.getEtiquetas(),
+                g.getCategoria(), g.getUbicacion(), g.getFecha(), g.getOrigen()
+        );
+    }
+
+    // ====== PdI ======
+    @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
+    @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
 }

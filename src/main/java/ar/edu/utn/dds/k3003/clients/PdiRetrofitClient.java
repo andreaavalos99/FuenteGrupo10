@@ -1,33 +1,21 @@
 package ar.edu.utn.dds.k3003.clients;
 
 
-import ar.edu.utn.dds.k3003.facades.dtos.ColeccionDTO;
-import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
+import ar.edu.utn.dds.k3003.facades.dtos.PdIDTO;
 import retrofit2.Call;
 import retrofit2.http.*;
 
 import java.util.List;
-import java.util.Map;
 
+public interface PdiRetrofitClient {
 
-public interface FuentesRetrofitClient {
+    @POST("pdis")
+    Call<PdIDTO> crear(@Body PdIDTO body);
 
-    @GET("colecciones")
-    Call<List<ColeccionDTO>> colecciones();
+    @GET("pdis/{id}")
+    Call<PdIDTO> get(@Path("id") String id);
 
-    @GET("coleccion/{nombre}")
-    Call<ColeccionDTO> coleccion(@Path("nombre") String nombre);
-
-    @POST("coleccion")
-    Call<ColeccionDTO> crearColeccion(@Body ColeccionDTO body);
-
-    @GET("coleccion/{nombre}/hechos")
-    Call<List<HechoDTO>> hechosDeColeccion(@Path("nombre") String nombre);
-
-    @GET("hecho/{id}")
-    Call<HechoDTO> hechoPorId(@Path("id") String id);
-
-    // PATCH /hecho/{id}  { "estado": "borrado" }
-    @PATCH("hecho/{id}")
-    Call<HechoDTO> patchEstadoHecho(@Path("id") String id, @Body Map<String, String> body);
+    @GET("pdis")
+    Call<List<PdIDTO>> porHecho(@Query("hecho") String hechoId);
 }
+

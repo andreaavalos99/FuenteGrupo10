@@ -1,9 +1,8 @@
 package ar.edu.utn.dds.k3003.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import lombok.*;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import java.time.LocalDateTime;
@@ -12,19 +11,24 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
+@AllArgsConstructor
 public class Coleccion {
 
-    public Coleccion(String nombre, String descripcion) {
-        this.nombre = nombre;
-        this.descripcion = descripcion;
+    @Id
+    private String nombre;
+
+    private String descripcion;
+
+    private LocalDateTime fechaModificacion;
+
+    @PrePersist
+    @PreUpdate
+    void touch() {
+        this.fechaModificacion = LocalDateTime.now();
     }
 
     public Coleccion() {
         // Constructor vacío requerido por JPA
     }
-    @Id
-    private String nombre;
-    private String descripcion;
-    private LocalDateTime fechaModificacion;
 
 }
