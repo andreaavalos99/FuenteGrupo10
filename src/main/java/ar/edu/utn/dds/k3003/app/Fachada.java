@@ -51,6 +51,7 @@ public class Fachada implements FachadaFuente {
                 .description("Tiempo de alta de hecho").register(meterRegistry);
     }
 
+
     @Override
     public ColeccionDTO agregar(ColeccionDTO dto) {
         if (dto == null || dto.nombre() == null || dto.nombre().isBlank()) {
