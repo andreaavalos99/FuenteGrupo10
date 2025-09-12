@@ -4,8 +4,12 @@ import ar.edu.utn.dds.k3003.app.Fachada;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.NoSuchElementException;
 
 @RestController
 public class HechoController {
@@ -21,8 +25,13 @@ public class HechoController {
 
     @GetMapping("/hecho/{id}")
     public ResponseEntity<HechoDTO> obtenerHecho(@PathVariable String id) {
-        return ResponseEntity.ok(fachadaFuente.buscarHechoXId(id));
+        try {
+            return ResponseEntity.ok(fachadaFuente.buscarHechoXId(id));
+        } catch (NoSuchElementException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hecho no encontrado: " + id);
+        }
     }
+
 
     @PostMapping("/hecho")
     public ResponseEntity<HechoDTO> crearHecho(@RequestBody HechoDTO hecho) {
