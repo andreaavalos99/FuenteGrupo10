@@ -175,11 +175,11 @@ public class Fachada implements FachadaFuente {
                 g.getCategoria(), g.getUbicacion(), g.getFecha(), g.getOrigen()
         );
     }
+    @Transactional
     public void vaciarHechosYColecciones() {
-        hechoRepo.deleteAll();
-        coleccionRepo.deleteAll();
+        hechoRepo.deleteAllInBatch();
+        coleccionRepo.deleteAllInBatch();
     }
-
     // ====== PdI ======
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
     @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
