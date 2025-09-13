@@ -1,8 +1,11 @@
 package ar.edu.utn.dds.k3003.controller;
 
 import ar.edu.utn.dds.k3003.app.Fachada;
+import ar.edu.utn.dds.k3003.dto.HechoConEstadoDTO;
+import ar.edu.utn.dds.k3003.dto.HechoMapper;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
+import ar.edu.utn.dds.k3003.model.EstadoHecho;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +35,6 @@ public class HechoController {
         }
     }
 
-
     @PostMapping("/hecho")
     public ResponseEntity<HechoDTO> crearHecho(@RequestBody HechoDTO hecho) {
         return ResponseEntity.ok(fachadaFuente.agregar(hecho));
@@ -44,4 +46,19 @@ public class HechoController {
     public ResponseEntity<HechoDTO> actualizarEstado(@PathVariable String id, @RequestBody EstadoRequest req) {
         return ResponseEntity.ok(fachada.actualizarEstadoHecho(id, req.estado()));
     }
+
+    @PatchMapping("/hecho/{id}/censurar")
+    public ResponseEntity<String> censurarHecho(@PathVariable String id) {
+        try {
+            HechoDTO dto = fachada.actualizarEstadoHecho(id, "censurado");
+
+            HechoConEstadoDTO hecho = HechoMapper.toHechoConEstadoDTO(dto, EstadoHecho.CENSURADO);
+            return ResponseEntity.ok(hecho.estado().toString());
+        } catch (NoSuchElementException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hecho no encontrado: " + id);
+        }
+    }
+
+
+
 }

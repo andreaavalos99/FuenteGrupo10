@@ -28,6 +28,7 @@ public class ColeccionController {
     public ResponseEntity<ColeccionDTO> obtenerColeccion(@PathVariable String nombre) {
         return ResponseEntity.ok(fachadaFuente.buscarColeccionXId(nombre));
     }
+
     @GetMapping("/coleccion/{nombre}/hechos")
     public ResponseEntity<List<HechoDTO>> obtenerHechosXColeccion(@PathVariable String nombre) {
         return ResponseEntity.ok(fachadaFuente.buscarHechosXColeccion(nombre));
