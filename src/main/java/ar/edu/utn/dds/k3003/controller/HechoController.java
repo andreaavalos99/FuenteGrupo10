@@ -62,7 +62,11 @@ public class HechoController {
     }
 
 
-
+    @DeleteMapping("/reset")
+    public ResponseEntity<Void> eliminarTodo() {
+        fachada.vaciarHechosYColecciones();
+        return ResponseEntity.noContent().build();
+    }
 
 
 }
