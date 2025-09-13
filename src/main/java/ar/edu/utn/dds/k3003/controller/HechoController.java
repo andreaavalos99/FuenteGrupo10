@@ -48,16 +48,20 @@ public class HechoController {
     }
 
     @PatchMapping("/hecho/{id}/censurar")
-    public ResponseEntity<String> censurarHecho(@PathVariable String id) {
+    public ResponseEntity<HechoDTO> censurarHecho(@PathVariable String id) {
         try {
-            HechoDTO dto = fachada.actualizarEstadoHecho(id, "censurado");
-
-            HechoConEstadoDTO hecho = HechoMapper.toHechoConEstadoDTO(dto, EstadoHecho.CENSURADO);
-            return ResponseEntity.ok(hecho.estado().toString());
+            HechoDTO dto = fachada.actualizarEstadoHecho(id, "CENSURADO");
+            return ResponseEntity.noContent().build();
         } catch (NoSuchElementException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hecho no encontrado: " + id);
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Error de datos: " + e.getMostSpecificCause().getMessage(), e);
         }
     }
+
+
 
 
 

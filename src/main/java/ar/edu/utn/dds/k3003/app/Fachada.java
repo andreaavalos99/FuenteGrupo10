@@ -120,8 +120,16 @@ public class Fachada implements FachadaFuente {
 
     @Override @Transactional(readOnly = true)
     public HechoDTO buscarHechoXId(String hechoId) {
-        Integer id = Integer.valueOf(hechoId); // 👈 convertir a Integer
-        var h = hechoRepo.findById(id).orElseThrow(() -> new NoSuchElementException(hechoId + " no existe"));
+        final int id;
+        try {
+            id = Integer.parseInt(hechoId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("id inválido: debe ser numérico");
+        }
+
+        var h = hechoRepo.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(hechoId + " no existe"));
+
         return new HechoDTO(
                 h.getId().toString(), h.getNombreColeccion(), h.getTitulo(), h.getEtiquetas(),
                 h.getCategoria(), h.getUbicacion(), h.getFecha(), h.getOrigen()
@@ -141,19 +149,27 @@ public class Fachada implements FachadaFuente {
     }
 
     public HechoDTO actualizarEstadoHecho(String hechoId, String estadoTexto) {
-        Integer id = Integer.valueOf(hechoId); // 👈 convertir a Integer
+        final int id;
+        try {
+            id = Integer.parseInt(hechoId);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("id inválido: debe ser numérico");
+        }
+
         var hecho = hechoRepo.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Hecho " + hechoId + " no existe"));
 
         var nuevo = switch (estadoTexto == null ? "" : estadoTexto.trim().toLowerCase()) {
             case "borrado", "censurado" -> EstadoHecho.CENSURADO;
-            case "activo" -> EstadoHecho.ACTIVO;
-            default -> { erroresDominio.increment(); throw new IllegalArgumentException("estado inválido: " + estadoTexto); }
+            case "activo"               -> EstadoHecho.ACTIVO;
+            default -> {
+                erroresDominio.increment();
+                throw new IllegalArgumentException("estado inválido: " + estadoTexto);
+            }
         };
 
         hecho.setEstado(nuevo);
         var g = hechoRepo.save(hecho);
-
         return new HechoDTO(
                 g.getId().toString(), g.getNombreColeccion(), g.getTitulo(), g.getEtiquetas(),
                 g.getCategoria(), g.getUbicacion(), g.getFecha(), g.getOrigen()

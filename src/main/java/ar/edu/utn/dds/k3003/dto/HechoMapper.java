@@ -15,7 +15,7 @@ public class HechoMapper {
                 dto.ubicacion(),
                 dto.fecha(),
                 dto.origen(),
-                EstadoHecho.ACTIVO
+                estado
         );
     }
 }
