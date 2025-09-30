@@ -1,5 +1,6 @@
 package ar.edu.utn.dds.k3003.app;
 
+import ar.edu.utn.dds.k3003.clients.SolicitudesProxy;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.FachadaProcesadorPdI;
 import ar.edu.utn.dds.k3003.facades.dtos.*;
@@ -25,6 +26,7 @@ public class Fachada implements FachadaFuente {
     private final HechoRepository hechoRepo;
 
     private FachadaProcesadorPdI procesadorPdI;
+    private final SolicitudesProxy solicitudesProxy;
 
     private final Counter coleccionesCreadas;
     private final Counter hechosCreados;
@@ -33,10 +35,11 @@ public class Fachada implements FachadaFuente {
 
     @Autowired
     public Fachada(ColeccionRepository coleccionRepository,
-                   HechoRepository hechoRepository,
+                   HechoRepository hechoRepository, SolicitudesProxy solicitudesProxy,
                    MeterRegistry meterRegistry) {
         this.coleccionRepo = coleccionRepository;
         this.hechoRepo = hechoRepository;
+        this.solicitudesProxy = solicitudesProxy;
 
         this.coleccionesCreadas = Counter.builder("fuentes.colecciones.creadas")
                 .description("Cantidad de colecciones creadas").register(meterRegistry);
@@ -183,4 +186,27 @@ public class Fachada implements FachadaFuente {
     // ====== PdI ======
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
     @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
+
+    @Transactional(readOnly = true)
+    public List<HechoDTO> listarHechosSinSolicitudes(String estadoOpt, String nombreOpt) {
+        Set<Integer> idsConSolicitud = solicitudesProxy.obtenerIdsConSolicitudSeguros();
+
+        EstadoHecho estado = "CENSURADO".equalsIgnoreCase(estadoOpt) ? EstadoHecho.CENSURADO : EstadoHecho.ACTIVO;
+        List<Hecho> base = hechoRepo.findAll().stream()
+                .filter(h -> h.getEstado() == estado)
+                .toList();
+
+        var filtrados = base.stream()
+                .filter(h -> !idsConSolicitud.contains(h.getId()))
+                .filter(h -> nombreOpt == null || nombreOpt.isBlank()
+                        || (h.getTitulo() != null && h.getTitulo().toLowerCase().contains(nombreOpt.toLowerCase())))
+                .map(h -> new HechoDTO(
+                        h.getId().toString(), h.getNombreColeccion(), h.getTitulo(), h.getEtiquetas(),
+                        h.getCategoria(), h.getUbicacion(), h.getFecha(), h.getOrigen()
+                ))
+                .toList();
+
+        return filtrados;
+    }
+
 }

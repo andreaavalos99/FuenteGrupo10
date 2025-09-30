@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @RestController
@@ -68,5 +69,11 @@ public class HechoController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/hechos/sin-solicitudes")
+    public ResponseEntity<List<HechoDTO>> listarHechosSinSolicitudes(
+            @RequestParam(defaultValue = "ACTIVO") String estado,
+            @RequestParam(required = false) String nombre) {
+        return ResponseEntity.ok(fachada.listarHechosSinSolicitudes(estado, nombre));
+    }
 
 }
