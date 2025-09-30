@@ -1,19 +1,17 @@
 package ar.edu.utn.dds.k3003.controller;
 
 import ar.edu.utn.dds.k3003.app.Fachada;
-import ar.edu.utn.dds.k3003.dto.HechoConEstadoDTO;
-import ar.edu.utn.dds.k3003.dto.HechoMapper;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
-import ar.edu.utn.dds.k3003.model.EstadoHecho;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.NoSuchElementException;
+
+import org.springframework.web.bind.annotation.*;
+
+import java.security.InvalidParameterException;
 
 @RestController
 public class HechoController {
@@ -29,15 +27,18 @@ public class HechoController {
 
     @GetMapping("/hecho/{id}")
     public ResponseEntity<HechoDTO> obtenerHecho(@PathVariable String id) {
-        try {
-            return ResponseEntity.ok(fachadaFuente.buscarHechoXId(id));
-        } catch (NoSuchElementException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hecho no encontrado: " + id);
+        try { Integer.parseInt(id); }
+        catch (NumberFormatException e) {
+            throw new InvalidParameterException("id inválido: debe ser numérico");
         }
+        return ResponseEntity.ok(fachadaFuente.buscarHechoXId(id));
     }
 
     @PostMapping("/hecho")
     public ResponseEntity<HechoDTO> crearHecho(@RequestBody HechoDTO hecho) {
+        if (hecho == null) throw new InvalidParameterException("body requerido");
+        if (hecho.nombreColeccion() == null || hecho.nombreColeccion().isBlank())
+            throw new InvalidParameterException("nombreColeccion es requerido");
         return ResponseEntity.ok(fachadaFuente.agregar(hecho));
     }
 
@@ -45,23 +46,23 @@ public class HechoController {
 
     @PatchMapping("/hecho/{id}")
     public ResponseEntity<HechoDTO> actualizarEstado(@PathVariable String id, @RequestBody EstadoRequest req) {
+        try { Integer.parseInt(id); }
+        catch (NumberFormatException e) { throw new InvalidParameterException("id inválido: debe ser numérico"); }
+
+        if (req == null || req.estado() == null || req.estado().isBlank())
+            throw new InvalidParameterException("estado es requerido");
+
         return ResponseEntity.ok(fachada.actualizarEstadoHecho(id, req.estado()));
     }
 
     @PatchMapping("/hecho/{id}/censurar")
-    public ResponseEntity<HechoDTO> censurarHecho(@PathVariable String id) {
-        try {
-            HechoDTO dto = fachada.actualizarEstadoHecho(id, "CENSURADO");
-            return ResponseEntity.noContent().build();
-        } catch (NoSuchElementException e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, e.getMessage(), e);
-        } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (org.springframework.dao.DataAccessException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Error de datos: " + e.getMostSpecificCause().getMessage(), e);
-        }
-    }
+    public ResponseEntity<Void> censurarHecho(@PathVariable String id) {
+        try { Integer.parseInt(id); }
+        catch (NumberFormatException e) { throw new InvalidParameterException("id inválido: debe ser numérico"); }
 
+        fachada.actualizarEstadoHecho(id, "CENSURADO");
+        return ResponseEntity.noContent().build();
+    }
 
     @DeleteMapping("/reset")
     public ResponseEntity<Void> eliminarTodo() {
@@ -73,7 +74,11 @@ public class HechoController {
     public ResponseEntity<List<HechoDTO>> listarHechosSinSolicitudes(
             @RequestParam(defaultValue = "ACTIVO") String estado,
             @RequestParam(required = false) String nombre) {
-        return ResponseEntity.ok(fachada.listarHechosSinSolicitudes(estado, nombre));
-    }
 
+        String est = estado == null ? "" : estado.trim().toUpperCase();
+        if (!est.equals("ACTIVO") && !est.equals("CENSURADO"))
+            throw new InvalidParameterException("estado inválido: use ACTIVO o CENSURADO");
+
+        return ResponseEntity.ok(fachada.listarHechosSinSolicitudes(est, nombre));
+    }
 }

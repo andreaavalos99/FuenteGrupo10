@@ -187,16 +187,17 @@ public class Fachada implements FachadaFuente {
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
     @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
 
+
     @Transactional(readOnly = true)
     public List<HechoDTO> listarHechosSinSolicitudes(String estadoOpt, String nombreOpt) {
         Set<Integer> idsConSolicitud = solicitudesProxy.obtenerIdsConSolicitudSeguros();
-
         EstadoHecho estado = "CENSURADO".equalsIgnoreCase(estadoOpt) ? EstadoHecho.CENSURADO : EstadoHecho.ACTIVO;
-        List<Hecho> base = hechoRepo.findAll().stream()
+
+        var base = hechoRepo.findAll().stream()
                 .filter(h -> h.getEstado() == estado)
                 .toList();
 
-        var filtrados = base.stream()
+        return base.stream()
                 .filter(h -> !idsConSolicitud.contains(h.getId()))
                 .filter(h -> nombreOpt == null || nombreOpt.isBlank()
                         || (h.getTitulo() != null && h.getTitulo().toLowerCase().contains(nombreOpt.toLowerCase())))
@@ -205,8 +206,6 @@ public class Fachada implements FachadaFuente {
                         h.getCategoria(), h.getUbicacion(), h.getFecha(), h.getOrigen()
                 ))
                 .toList();
-
-        return filtrados;
     }
 
 }
