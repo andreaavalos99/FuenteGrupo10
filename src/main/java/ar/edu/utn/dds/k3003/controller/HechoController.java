@@ -3,6 +3,7 @@ package ar.edu.utn.dds.k3003.controller;
 import ar.edu.utn.dds.k3003.app.Fachada;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.dtos.HechoDTO;
+import ar.edu.utn.dds.k3003.facades.dtos.PdIDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -81,4 +82,15 @@ public class HechoController {
 
         return ResponseEntity.ok(fachada.listarHechosSinSolicitudes(est, nombre));
     }
+
+    @PostMapping("/pdi")
+    public ResponseEntity<PdIDTO> crearPdi(@RequestBody PdIDTO dto) {
+        if (dto == null) throw new InvalidParameterException("body requerido");
+        if (dto.hechoId() == null || dto.hechoId().isBlank())
+            throw new InvalidParameterException("hechoId es requerido");
+        fachadaFuente.buscarHechoXId(dto.hechoId());
+        PdIDTO procesado = fachada.agregar(dto);
+        return ResponseEntity.ok(procesado);
+    }
+
 }

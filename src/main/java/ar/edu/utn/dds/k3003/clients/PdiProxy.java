@@ -18,9 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
 
 import org.jetbrains.annotations.Nullable;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import retrofit2.Call;
@@ -31,34 +33,31 @@ import retrofit2.converter.jackson.JacksonConverterFactory;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 @Slf4j
+@Component
 public class PdiProxy implements FachadaProcesadorPdI {
 
     private final PdiRetrofitClient service;
-
     private final Counter llamadasPdi;
     private final Counter erroresPdi;
     private final Timer   tiempoPdi;
 
-    public PdiProxy(ObjectMapper mapper, MeterRegistry registry) {
-        this(mapper, registry,
-                System.getenv().getOrDefault("URL_PDI", "http://localhost:8082/"));
-    }
-
+    @Autowired
     public PdiProxy(ObjectMapper mapper,
                     MeterRegistry registry,
-                    @Value("${URL_PDI:http://localhost:8082/}") String baseUrlEnv) {
+                    @Value("${URL_PDI:https://tpdds2025-procesadorpdi-2.onrender.com/}") String baseUrlEnv) {
 
         mapper.findAndRegisterModules();
         mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         final String baseUrl = ensureEndsWithSlash(baseUrlEnv);
-        log.info("[PDI] Base URL: {}", baseUrl);
 
-        HttpLoggingInterceptor logging = new HttpLoggingInterceptor(
-                msg -> log.info("[PDI http] {}", msg));
+        Process log = null;
+        HttpLoggingInterceptor logging = new HttpLoggingInterceptor(msg -> log.info());
         logging.setLevel(HttpLoggingInterceptor.Level.BODY);
 
         Interceptor requestIdInterceptor = chain -> {
@@ -70,10 +69,8 @@ public class PdiProxy implements FachadaProcesadorPdI {
 
         Interceptor retryInterceptor = chain -> {
             Request req = chain.request();
-            int attempts = 0;
-            int max = 2;
+            int attempts = 0, max = 2;
             long backoff = 300L;
-
             while (true) {
                 attempts++;
                 okhttp3.Response resp = null;
@@ -81,7 +78,7 @@ public class PdiProxy implements FachadaProcesadorPdI {
                     resp = chain.proceed(req);
                     if (resp.code() >= 500 && attempts < max) {
                         resp.close();
-                        sleep(backoff);
+                        Thread.sleep(backoff);
                         backoff *= 2;
                         continue;
                     }
@@ -89,11 +86,17 @@ public class PdiProxy implements FachadaProcesadorPdI {
                 } catch (IOException io) {
                     if (resp != null) resp.close();
                     if (attempts < max) {
-                        sleep(backoff);
+                        try {
+                            Thread.sleep(backoff);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                         backoff *= 2;
                         continue;
                     }
                     throw io;
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
             }
         };
@@ -118,35 +121,22 @@ public class PdiProxy implements FachadaProcesadorPdI {
         this.service = retrofit.create(PdiRetrofitClient.class);
 
         this.llamadasPdi = Counter.builder("fuentes.pdi.llamadas")
-                .description("Llamadas salientes a ProcesadorPdI")
-                .register(registry);
-
+                .description("Llamadas salientes a ProcesadorPdI").register(registry);
         this.erroresPdi = Counter.builder("fuentes.pdi.errores")
-                .description("Errores en integración con ProcesadorPdI")
-                .register(registry);
-
+                .description("Errores en integración con ProcesadorPdI").register(registry);
         this.tiempoPdi = Timer.builder("fuentes.pdi.tiempo")
-                .description("Tiempo de llamadas a ProcesadorPdI")
-                .register(registry);
-    }
-
-    private static void sleep(long millis) {
-        try { Thread.sleep(millis); }
-        catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrumpido durante backoff", ie);
-        }
+                .description("Tiempo de llamadas a ProcesadorPdI").register(registry);
     }
 
     private static String ensureEndsWithSlash(String base) {
-        if (base == null || base.isBlank()) return "http://localhost:8082/";
+        if (base == null || base.isBlank()) return "https://tpdds2025-procesadorpdi-2.onrender.com/";
         return base.endsWith("/") ? base : base + "/";
     }
 
     @Override
-    public PdIDTO procesar(PdIDTO dto) throws IllegalStateException {
+    public PdIDTO procesar(PdIDTO dto) {
         Objects.requireNonNull(dto, "PdIDTO requerido");
-        if (dto.hechoId() == null || dto.hechoId().isBlank()) {   // ← record accessor
+        if (dto.hechoId() == null || dto.hechoId().isBlank()) {
             throw new IllegalStateException("hecho_id requerido");
         }
 
@@ -162,18 +152,16 @@ public class PdiProxy implements FachadaProcesadorPdI {
                 erroresPdi.increment();
                 String errorBody = safeReadBody(resp);
                 int code = resp.code();
-                log.warn("[PDI] POST /pdis -> {} {} body={}", code, resp.message(), errorBody);
 
-                if (code == 400) throw new IllegalStateException("PdI inválido");
-                if (code == 422) throw new IllegalStateException("ProcesadorPdI rechazó la PdI (unprocessable)");
-                throw new RuntimeException("Error conectando ProcesadorPdI (HTTP " + code + ")");
+                if (code == 400) throw new IllegalStateException("PdI inválido: " + errorBody);
+                if (code == 422) throw new IllegalStateException("ProcesadorPdI rechazó la PdI: " + errorBody);
+                throw new RuntimeException("Error conectando ProcesadorPdI (HTTP " + code + "): " + errorBody);
             } catch (RuntimeException e) {
                 erroresPdi.increment();
                 throw e;
             }
         });
     }
-
 
     @Override
     public PdIDTO buscarPdIPorId(String id) throws NoSuchElementException {
@@ -194,7 +182,7 @@ public class PdiProxy implements FachadaProcesadorPdI {
     }
 
     @Override
-    public List<PdIDTO> buscarPorHecho(String hechoId) throws NoSuchElementException {
+    public List<PdIDTO> buscarPorHecho(String hechoId) {
         Objects.requireNonNull(hechoId, "hechoId requerido");
         return tiempoPdi.record(() -> {
             llamadasPdi.increment();
@@ -208,20 +196,16 @@ public class PdiProxy implements FachadaProcesadorPdI {
     }
 
     @Override
-    public void setFachadaSolicitudes(FachadaSolicitudes fachadaSolicitudes) {
-        // Fuentes no debe llamar Solicitudes para este flujo (lo hace PdI / o Solicitudes censura en Fuentes)
-    }
+    public void setFachadaSolicitudes(FachadaSolicitudes fachadaSolicitudes) { /* no-op */ }
 
     private static <T> Response<T> exec(Call<T> call) {
         try { return call.execute(); }
-        catch (Exception e) {
-            throw new RuntimeException("Fallo al invocar ProcesadorPdI", e);
-        }
+        catch (Exception e) { throw new RuntimeException("Fallo al invocar ProcesadorPdI", e); }
     }
 
     private static String safeReadBody(Response<?> resp) {
         try {
-            @Nullable okhttp3.ResponseBody eb = resp.errorBody();
+            ResponseBody eb = resp.errorBody();
             return (eb == null) ? "" : eb.string();
         } catch (Exception e) {
             return "<unreadable>";
