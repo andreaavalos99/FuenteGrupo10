@@ -209,7 +209,6 @@ public class PdiProxy implements FachadaProcesadorPdI {
 
     @Override
     public void setFachadaSolicitudes(FachadaSolicitudes fachadaSolicitudes) {
-        // Fuentes no debe llamar Solicitudes para este flujo (lo hace PdI / o Solicitudes censura en Fuentes)
     }
 
     private static <T> Response<T> exec(Call<T> call) {
