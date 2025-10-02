@@ -40,12 +40,9 @@ public class PdiProxy implements FachadaProcesadorPdI {
 
     private final Counter llamadasPdi;
     private final Counter erroresPdi;
-    private final Timer   tiempoPdi;
+    private final Timer tiempoPdi;
 
-    public PdiProxy(ObjectMapper mapper, MeterRegistry registry) {
-        this(mapper, registry,
-                System.getenv().getOrDefault("URL_PDI", "https://tpdds2025-procesadorpdi-2.onrender.com/"));
-    }
+
 
     public PdiProxy(ObjectMapper mapper,
                     MeterRegistry registry,
