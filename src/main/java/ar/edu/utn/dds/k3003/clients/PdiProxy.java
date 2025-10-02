@@ -51,7 +51,6 @@ public class PdiProxy implements FachadaProcesadorPdI {
                     @Value("${URL_PDI:https://tpdds2025-procesadorpdi-2.onrender.com/}") String baseUrlEnv) {
 
         mapper.findAndRegisterModules();
-        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
         final String baseUrl = ensureEndsWithSlash(baseUrlEnv);
