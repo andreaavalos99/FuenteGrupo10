@@ -209,4 +209,10 @@ public class Fachada implements FachadaFuente {
                 .toList();
     }
 
+    public HechoDTO altaHechoDesdeMensaje(HechoDTO dto) {
+        return this.agregar(dto);
+
+    }
+
+
 }
