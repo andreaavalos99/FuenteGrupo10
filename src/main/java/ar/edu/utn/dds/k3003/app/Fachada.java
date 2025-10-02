@@ -185,18 +185,9 @@ public class Fachada implements FachadaFuente {
     }
     // ====== PdI ======
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
-    @Override
+    @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
 
-    public PdIDTO agregar(PdIDTO p) {
-        if (this.procesadorPdI == null) {
-            throw new IllegalStateException("ProcesadorPdI no configurado en Fuente");
-        }
-        return procesadorPdI.procesar(p);
-    }
-    @Autowired
-    public void wirePdi(FachadaProcesadorPdI proxy) {
-        this.procesadorPdI = proxy;
-    }
+
     @Transactional(readOnly = true)
     public List<HechoDTO> listarHechosSinSolicitudes(String estadoOpt, String nombreOpt) {
         Set<Integer> idsConSolicitud = solicitudesProxy.obtenerIdsConSolicitudSeguros();
