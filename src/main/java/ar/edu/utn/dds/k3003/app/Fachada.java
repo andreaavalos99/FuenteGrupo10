@@ -1,6 +1,5 @@
 package ar.edu.utn.dds.k3003.app;
 
-import ar.edu.utn.dds.k3003.clients.PdiProxy;
 import ar.edu.utn.dds.k3003.clients.SolicitudesProxy;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.FachadaProcesadorPdI;
@@ -28,7 +27,6 @@ public class Fachada implements FachadaFuente {
 
     private FachadaProcesadorPdI procesadorPdI;
     private final SolicitudesProxy solicitudesProxy;
-    private final PdiProxy pdiProxy;
 
     private final Counter coleccionesCreadas;
     private final Counter hechosCreados;
@@ -38,12 +36,10 @@ public class Fachada implements FachadaFuente {
     @Autowired
     public Fachada(ColeccionRepository coleccionRepository,
                    HechoRepository hechoRepository, SolicitudesProxy solicitudesProxy,
-                   PdiProxy pdiProxy, PdiProxy pdiProx,
-                   MeterRegistry meterRegistry) {
+                   MeterRegistry meterRegistry,FachadaProcesadorPdI procesadorPdI) {
         this.coleccionRepo = coleccionRepository;
         this.hechoRepo = hechoRepository;
         this.solicitudesProxy = solicitudesProxy;
-        this.pdiProxy = pdiProx;
 
         this.coleccionesCreadas = Counter.builder("fuentes.colecciones.creadas")
                 .description("Cantidad de colecciones creadas").register(meterRegistry);
@@ -56,6 +52,7 @@ public class Fachada implements FachadaFuente {
 
         this.tiempoAltaHecho = Timer.builder("fuentes.hechos.alta.tiempo")
                 .description("Tiempo de alta de hecho").register(meterRegistry);
+        this.procesadorPdI = procesadorPdI;
     }
 
 
