@@ -12,7 +12,9 @@ import org.springframework.stereotype.Component;
 @Conditional(RabbitConfig.RabbitEnabled.class)
 public class HechosPublisher {
     private final Channel channel;
-    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private final ObjectMapper mapper = new ObjectMapper()
+            .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule())
+            .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     private final String queue;
 
     public HechosPublisher(Channel channel, @Value("${QUEUE_NAME:hechos.nuevos}") String queue) {

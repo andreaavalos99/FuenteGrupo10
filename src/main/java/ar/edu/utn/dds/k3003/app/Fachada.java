@@ -4,6 +4,7 @@ import ar.edu.utn.dds.k3003.clients.SolicitudesProxy;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.FachadaProcesadorPdI;
 import ar.edu.utn.dds.k3003.facades.dtos.*;
+import ar.edu.utn.dds.k3003.mensajeria.HechosPublisher;
 import ar.edu.utn.dds.k3003.model.*;
 import ar.edu.utn.dds.k3003.repository.ColeccionRepository;
 import ar.edu.utn.dds.k3003.repository.HechoRepository;
@@ -33,6 +34,14 @@ public class Fachada implements FachadaFuente {
     private final Counter erroresDominio;
     private final Timer   tiempoAltaHecho;
 
+    private final Counter mqPublicacionesOk;
+    private final Counter mqPublicacionesError;
+    private final Timer   mqTiempoPublicar;
+
+    @Autowired
+    HechosPublisher publisher;
+
+
     @Autowired
     public Fachada(ColeccionRepository coleccionRepository,
                    HechoRepository hechoRepository, SolicitudesProxy solicitudesProxy,
@@ -53,6 +62,15 @@ public class Fachada implements FachadaFuente {
         this.tiempoAltaHecho = Timer.builder("fuentes.hechos.alta.tiempo")
                 .description("Tiempo de alta de hecho").register(meterRegistry);
         this.procesadorPdI = procesadorPdI;
+
+        this.mqPublicacionesOk = Counter.builder("fuentes.mq.publicaciones.ok")
+                .description("Mensajes publicados correctamente en MQ").register(meterRegistry);
+
+        this.mqPublicacionesError = Counter.builder("fuentes.mq.publicaciones.error")
+                .description("Errores al publicar en MQ").register(meterRegistry);
+
+        this.mqTiempoPublicar = Timer.builder("fuentes.mq.publicar.tiempo")
+                .description("Tiempo de publicar el mensaje en MQ").register(meterRegistry);
     }
 
 
@@ -208,11 +226,40 @@ public class Fachada implements FachadaFuente {
                 ))
                 .toList();
     }
-
-    public HechoDTO altaHechoDesdeMensaje(HechoDTO dto) {
-        return this.agregar(dto);
-
+    public HechoDTO altaHecho(HechoDTO dto) {
+        HechoDTO guardado = this.agregar(dto);
+        var sample = Timer.start();
+        try {
+            publisher.publicar(guardado);
+            mqPublicacionesOk.increment();
+            log.info("[mensajería] publicado Hecho id={} (colección='{}', título='{}')",
+                    guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+            return guardado;
+        } catch (Exception e) {
+            mqPublicacionesError.increment();
+            log.warn("[mensajería] error publicando Hecho id={} -> {}", guardado.id(), e.toString(), e);
+            return guardado;
+        } finally {
+            sample.stop(mqTiempoPublicar);
+        }
     }
 
+
+    public void altaHechoDesdeMensaje(HechoDTO dto) {
+            HechoDTO guardado = this.agregar(dto);
+            var sample = Timer.start(); // Timer.Sample
+            try {
+                publisher.publicar(guardado);
+                mqPublicacionesOk.increment();
+                log.info("[mensajería] publicado Hecho id={} (colección='{}', título='{}')",
+                        guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+            } catch (Exception e) {
+                mqPublicacionesError.increment();
+                log.warn("[mensajería] error publicando Hecho id={} -> {}", guardado.id(), e.toString(), e);
+
+            } finally {
+                sample.stop(mqTiempoPublicar);
+            }
+        }
 
 }

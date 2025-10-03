@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.*;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
+import java.io.IOException;
+
 @Configuration
 public class RabbitConfig {
 
@@ -14,8 +16,8 @@ public class RabbitConfig {
     @Bean
     @Conditional(RabbitEnabled.class)
     public com.rabbitmq.client.Connection rabbitConnection() throws Exception {
+        ConnectionFactory f = new ConnectionFactory();
         if (uri == null || uri.isBlank()) throw new IllegalStateException("RABBITMQ_URI vacío");
-        var f = new ConnectionFactory();
         f.setUri(uri);
         f.setAutomaticRecoveryEnabled(true);
         return f.newConnection("fuentes-app");
@@ -25,7 +27,11 @@ public class RabbitConfig {
     @Conditional(RabbitEnabled.class)
     public com.rabbitmq.client.Channel rabbitChannel(com.rabbitmq.client.Connection c) throws Exception {
         var ch = c.createChannel();
-        ch.queueDeclare(queue, true, false, false, null); // durable=true
+        try {
+            ch.queueDeclarePassive(queue);
+        } catch (IOException notExistsOrMismatch) {
+            ch.queueDeclare(queue, true, false, false, null);
+        }
         return ch;
     }
 
