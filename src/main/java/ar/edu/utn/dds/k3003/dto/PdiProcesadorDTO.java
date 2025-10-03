@@ -6,35 +6,31 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record PdiProcesadorDTO(
-        @JsonProperty("id")
-        String id,
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.Setter;
 
-        @JsonProperty("hechoId") @JsonAlias("hecho_id")
-        String hechoId,
+import java.time.LocalDateTime;
+import java.util.List;
 
-        @JsonProperty("descripcion")
-        String descripcion,
+@Getter
+@Setter
+public class PdiProcesadorDTO {
+    private String id;
 
-        @JsonProperty("lugar")
-        String lugar,
+    @JsonProperty("hecho_id")
+    private String hechoId;
 
-        @JsonProperty("momento")
-        LocalDateTime momento,
+    private String descripcion;
+    private String lugar;
+    private LocalDateTime momento;
+    private String contenido;
+    private List<String> etiquetas;
 
-        @JsonProperty("contenido")
-        String contenido,
+    @JsonProperty("resultado_ocr")
+    private String resultadoOcr;
 
-        @JsonProperty("etiquetas")
-        List<String> etiquetas,
+    @JsonProperty("url_imagen")
+    private String urlImagen;
 
-        @JsonProperty("resultadoOcr") @JsonAlias("resultado_ocr")
-        String resultadoOcr,
-
-        @JsonProperty("urlImagen") @JsonAlias("url_imagen")
-        String urlImagen
-) {
-    public PdiProcesadorDTO(String id, String hechoId) {
-        this(id, hechoId, null, null, null, null, List.of(), null, null);
-    }
 }
