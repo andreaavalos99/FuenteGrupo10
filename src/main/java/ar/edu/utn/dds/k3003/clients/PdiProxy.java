@@ -24,14 +24,20 @@ public class PdiProxy {
 
     public PdiProxy(ObjectMapper mapper,
                     @Value("${URL_PDI:https://tpdds2025-procesadorpdi-2.onrender.com/}") String baseUrl) {
-        mapper.findAndRegisterModules();
+
+        ObjectMapper clientMapper = mapper.copy();
+        clientMapper.findAndRegisterModules();
+        clientMapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/")
-                .addConverterFactory(JacksonConverterFactory.create(mapper))
+                .addConverterFactory(JacksonConverterFactory.create(clientMapper))
                 .client(new OkHttpClient())
                 .build();
+
         this.api = retrofit.create(PdiRetrofitClient.class);
         log.info("[PDI] Base URL: {}", baseUrl);
+        log.info("[PDI] mapper del cliente en SNAKE_CASE (solo para llamada al procesador)");
     }
 
     public PdiProcesadorDTO crear(PdiProcesadorDTO dto) {
@@ -49,5 +55,4 @@ public class PdiProxy {
             return null;
         }
     }
-
 }
