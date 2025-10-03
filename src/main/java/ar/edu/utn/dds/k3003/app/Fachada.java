@@ -202,7 +202,7 @@ public class Fachada implements FachadaFuente {
         hechoRepo.deleteAllInBatch();
         coleccionRepo.deleteAllInBatch();
     }
-    // ====== PdI ======
+    //pdi
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
     @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
 
@@ -226,36 +226,26 @@ public class Fachada implements FachadaFuente {
                 ))
                 .toList();
     }
+
+
+    // mensajeria
     public HechoDTO altaHecho(HechoDTO dto) {
         HechoDTO guardado = this.agregar(dto);
         var sample = Timer.start();
         try {
-            publisher.publicar(guardado);
+            publisher.publicarHechoCreado(guardado);
             mqPublicacionesOk.increment();
-            log.info("[mensajería] publicado Hecho id={} (colección='{}', título='{}')",
+            log.info("[mq] publicado Hecho id={} col='{}' titulo='{}'",
                     guardado.id(), guardado.nombreColeccion(), guardado.titulo());
             return guardado;
         } catch (Exception e) {
             mqPublicacionesError.increment();
-            log.warn("[mensajería] error publicando Hecho id={} -> {}", guardado.id(), e.toString(), e);
-            return guardado;
+            log.warn("[mq] error publicando Hecho id={} -> {}", guardado.id(), e.toString(), e);
+            return guardado; // persistido igual
         } finally {
             sample.stop(mqTiempoPublicar);
         }
     }
-
-
-    public void altaHechoDesdeMensaje(HechoDTO dto) {
-            var guardado = this.agregar(dto);  // persiste
-            try {
-                publisher.publicar(guardado);   // <-- SOLO acá publicamos
-                mqPublicacionesOk.increment();
-                log.info("[mq] publicado id={}", guardado.id());
-            } catch (Exception e) {
-                mqPublicacionesError.increment();
-                log.warn("[mq] error publicando id={} -> {}", guardado.id(), e.toString(), e);
-            }
-        }
 
     public HechoDTO altaHechoSinPublicar(HechoDTO dto) {
         var guardado = this.agregar(dto);

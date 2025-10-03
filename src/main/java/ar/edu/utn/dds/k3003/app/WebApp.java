@@ -8,7 +8,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(scanBasePackages = "ar.edu.utn.dds.k3003")
 @EnableJpaRepositories(basePackages = "ar.edu.utn.dds.k3003.repository")
-@EntityScan(basePackages = "ar.edu.utn.dds.k3003.model")
-public class WebApp {
+@EntityScan(basePackages = {
+        "ar.edu.utn.dds.k3003.model",
+        "ar.edu.utn.dds.k3003.mensajeria" })
+        public class WebApp {
     public static void main(String[] args) { SpringApplication.run(WebApp.class, args); }
 }
