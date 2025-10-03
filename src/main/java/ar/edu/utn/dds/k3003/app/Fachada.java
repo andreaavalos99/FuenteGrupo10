@@ -1,6 +1,8 @@
 package ar.edu.utn.dds.k3003.app;
 
+import ar.edu.utn.dds.k3003.clients.PdiProxy;
 import ar.edu.utn.dds.k3003.clients.SolicitudesProxy;
+import ar.edu.utn.dds.k3003.dto.PdiProcesadorDTO;
 import ar.edu.utn.dds.k3003.facades.FachadaFuente;
 import ar.edu.utn.dds.k3003.facades.FachadaProcesadorPdI;
 import ar.edu.utn.dds.k3003.facades.dtos.*;
@@ -41,11 +43,12 @@ public class Fachada implements FachadaFuente {
     @Autowired
     HechosPublisher publisher;
 
+    private final PdiProxy pdiProxy;
 
     @Autowired
     public Fachada(ColeccionRepository coleccionRepository,
                    HechoRepository hechoRepository, SolicitudesProxy solicitudesProxy,
-                   MeterRegistry meterRegistry,FachadaProcesadorPdI procesadorPdI) {
+                   MeterRegistry meterRegistry, PdiProxy pdiProxy    ) {
         this.coleccionRepo = coleccionRepository;
         this.hechoRepo = hechoRepository;
         this.solicitudesProxy = solicitudesProxy;
@@ -61,7 +64,7 @@ public class Fachada implements FachadaFuente {
 
         this.tiempoAltaHecho = Timer.builder("fuentes.hechos.alta.tiempo")
                 .description("Tiempo de alta de hecho").register(meterRegistry);
-        this.procesadorPdI = procesadorPdI;
+        this.pdiProxy = pdiProxy;
 
         this.mqPublicacionesOk = Counter.builder("fuentes.mq.publicaciones.ok")
                 .description("Mensajes publicados correctamente en MQ").register(meterRegistry);
@@ -204,7 +207,12 @@ public class Fachada implements FachadaFuente {
     }
     //pdi
     @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
+
     @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
+
+    public PdiProcesadorDTO recibirYEnviarPdi(PdiProcesadorDTO dto) {
+        return pdiProxy.crear(dto);
+    }
 
 
     @Transactional(readOnly = true)
