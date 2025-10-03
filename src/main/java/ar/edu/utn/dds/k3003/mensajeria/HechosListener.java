@@ -35,23 +35,24 @@ public class HechosListener {
 
     @PostConstruct
     void start() throws Exception {
-        channel.basicQos(1); // de a 1
+        channel.basicQos(1);
         channel.basicConsume(queue, false, new DefaultConsumer(channel) {
             @Override
             public void handleDelivery(String tag, Envelope env, AMQP.BasicProperties props, byte[] body) {
                 try {
                     HechoDTO dto = mapper.readValue(body, HechoDTO.class);
 
-                    fachada.altaHechoDesdeMensaje(dto);
+                    fachada.altaHechoSinPublicar(dto); // <--- evita republish
 
                     channel.basicAck(env.getDeliveryTag(), false);
-                    log.info("[mensajería] Hecho guardado OK id={}", dto.id());
+                    log.info("[mensajería] Hecho procesado OK id={}", dto.id());
                 } catch (Exception e) {
-                    log.warn("[mensajería] error procesando mensaje; requeue", e);
+                    log.warn("[mensajería] error procesando; requeue", e);
                     try { channel.basicNack(env.getDeliveryTag(), false, true); } catch (Exception ignore) {}
                 }
             }
         });
+
         log.info("[mensajería] oyente iniciado en cola '{}'", queue);
     }
 }

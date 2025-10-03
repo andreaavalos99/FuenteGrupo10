@@ -246,20 +246,21 @@ public class Fachada implements FachadaFuente {
 
 
     public void altaHechoDesdeMensaje(HechoDTO dto) {
-            HechoDTO guardado = this.agregar(dto);
-            var sample = Timer.start(); // Timer.Sample
+            var guardado = this.agregar(dto);  // persiste
             try {
-                publisher.publicar(guardado);
+                publisher.publicar(guardado);   // <-- SOLO acá publicamos
                 mqPublicacionesOk.increment();
-                log.info("[mensajería] publicado Hecho id={} (colección='{}', título='{}')",
-                        guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+                log.info("[mq] publicado id={}", guardado.id());
             } catch (Exception e) {
                 mqPublicacionesError.increment();
-                log.warn("[mensajería] error publicando Hecho id={} -> {}", guardado.id(), e.toString(), e);
-
-            } finally {
-                sample.stop(mqTiempoPublicar);
+                log.warn("[mq] error publicando id={} -> {}", guardado.id(), e.toString(), e);
             }
         }
 
-}
+    public HechoDTO altaHechoSinPublicar(HechoDTO dto) {
+        var guardado = this.agregar(dto);
+        log.info("[mq] consumido y persistido id={}", guardado.id());
+        return guardado;
+    }
+
+    }
