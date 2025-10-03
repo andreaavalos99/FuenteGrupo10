@@ -38,7 +38,9 @@ public class PdiProxy {
         try {
             Response<PdiProcesadorDTO> r = api.crear(dto).execute();
             if (!r.isSuccessful() || r.body() == null) {
-                log.warn("[PDI] error {} al crear PDI", r.code());
+                String body = null;
+                try { body = r.errorBody() != null ? r.errorBody().string() : null; } catch (Exception ignore) {}
+                log.warn("[PDI] error {} al crear PDI. errorBody={}", r.code(), body);
                 return null;
             }
             return r.body();
@@ -47,4 +49,5 @@ public class PdiProxy {
             return null;
         }
     }
+
 }
