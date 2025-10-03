@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import okhttp3.OkHttpClient;
 
+import okhttp3.logging.HttpLoggingInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,10 +30,17 @@ public class PdiProxy {
         clientMapper.findAndRegisterModules();
         clientMapper.setPropertyNamingStrategy(com.fasterxml.jackson.databind.PropertyNamingStrategies.SNAKE_CASE);
 
+        HttpLoggingInterceptor logging = new HttpLoggingInterceptor(log::info);
+        logging.setLevel(HttpLoggingInterceptor.Level.BODY);
+
+        OkHttpClient http = new OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .build();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/")
                 .addConverterFactory(JacksonConverterFactory.create(clientMapper))
-                .client(new OkHttpClient())
+                .client(http) // <-- usa este http con logging
                 .build();
 
         this.api = retrofit.create(PdiRetrofitClient.class);
@@ -55,4 +63,5 @@ public class PdiProxy {
             return null;
         }
     }
+
 }
