@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -73,7 +74,8 @@ public class SubscriptionManager {
     }
 
     public Suscripcion subscribeTopic(String topic) throws Exception {
-        String queue = qPrefix + topic.replace('*','_').replace('#','_') + qSuffix;
+        String instance = System.getenv().getOrDefault("FUENTE_ID", UUID.randomUUID().toString());
+        String queue = qPrefix + instance + "." + topic.replace('*','_').replace('#','_') + qSuffix;
 
         declareQueueAndBind(queue, topic);
         startConsumer(queue);
@@ -137,25 +139,21 @@ public class SubscriptionManager {
                         lagMs.record(lag);
                     }
 
-                    // Solo eventos esperados
                     if (eventType != null && !eventType.equals("hecho.creado") && !eventType.equals("hechos.nuevos")) {
                         ch.basicAck(env.getDeliveryTag(), false);
                         return;
                     }
 
-                    // Evito eco
                     if ("fuente".equalsIgnoreCase(origin)) {
                         ch.basicAck(env.getDeliveryTag(), false);
                         return;
                     }
 
-                    // Idempotencia persistente
                     if (messageId != null && msgRepo.existsById(messageId)) {
                         ch.basicAck(env.getDeliveryTag(), false);
                         return;
                     }
 
-                    // Parseo y alta
                     HechoDTO dto = tryParse(body);
                     fachada.altaHechoSinPublicar(dto);
 
@@ -164,7 +162,6 @@ public class SubscriptionManager {
                     ch.basicAck(env.getDeliveryTag(), false);
                 } catch (Exception ex) {
                     msgFallidos.increment();
-                    // redelivery simple → requeue una vez; luego DLQ
                     if (env.isRedeliver()) ch.basicReject(env.getDeliveryTag(), false);
                     else ch.basicNack(env.getDeliveryTag(), false, true);
                 }

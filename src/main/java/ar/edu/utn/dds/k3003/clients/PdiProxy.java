@@ -40,7 +40,7 @@ public class PdiProxy {
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl.endsWith("/") ? baseUrl : baseUrl + "/")
                 .addConverterFactory(JacksonConverterFactory.create(clientMapper))
-                .client(http) // <-- usa este http con logging
+                .client(http)
                 .build();
 
         this.api = retrofit.create(PdiRetrofitClient.class);
