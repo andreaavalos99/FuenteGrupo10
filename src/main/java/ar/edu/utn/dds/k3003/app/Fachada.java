@@ -40,7 +40,7 @@ public class Fachada implements FachadaFuente {
     private final Counter mqPublicacionesError;
     private final Timer   mqTiempoPublicar;
 
-    @Autowired
+    @Autowired(required = false)
     HechosPublisher publisher;
 
     private final PdiProxy pdiProxy;
@@ -80,6 +80,7 @@ public class Fachada implements FachadaFuente {
         this.mqTiempoPublicar = Timer.builder("fuentes.mq.publicar.tiempo")
                 .description("Tiempo de publicar el mensaje en MQ").register(meterRegistry);
 
+        this.busquedaProxy = busquedaProxy;
     }
 
 
@@ -284,10 +285,14 @@ public class Fachada implements FachadaFuente {
         HechoDTO guardado = this.agregar(dto);
         var sample = Timer.start();
         try {
-            publisher.publicarHechoCreado(guardado);
-            mqPublicacionesOk.increment();
-            log.info("[mq] publicado Hecho id={} col='{}' titulo='{}'",
-                    guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+            if (publisher != null) {
+                publisher.publicarHechoCreado(guardado);
+                mqPublicacionesOk.increment();
+                log.info("[mq] publicado Hecho id={} col='{}' titulo='{}'",
+                        guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+            } else {
+                log.warn("[mq] publisher no configurado, no se publica en MQ");
+            }
 
             busquedaProxy.indexarHecho(guardado);
 
@@ -302,10 +307,30 @@ public class Fachada implements FachadaFuente {
     }
 
 
-    public HechoDTO altaHechoSinPublicar(HechoDTO dto) {
+    public void altaHechoSinPublicar(HechoDTO dto) {
         var guardado = this.agregar(dto);
         log.info("[mq] consumido y persistido id={}", guardado.id());
-        return guardado;
     }
 
+    @Transactional(readOnly = true)
+    public int reindexarTodosEnBusqueda() {
+        var hechos = hechoRepo.findAll();
+
+        hechos.forEach(h -> {
+            HechoDTO dto = new HechoDTO(
+                    h.getId().toString(),
+                    h.getNombreColeccion(),
+                    h.getTitulo(),
+                    h.getEtiquetas(),
+                    h.getCategoria(),
+                    h.getUbicacion(),
+                    h.getFecha(),
+                    h.getOrigen()
+            );
+            busquedaProxy.indexarHecho(dto);
+        });
+
+        log.info("[BUSQUEDA] reindexados {} hechos en servicio de búsqueda", hechos.size());
+        return hechos.size();
+    }
     }

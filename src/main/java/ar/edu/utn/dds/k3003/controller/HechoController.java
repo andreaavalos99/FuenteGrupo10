@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import java.security.InvalidParameterException;
+import java.util.Map;
 
 @RestController
 public class HechoController {
@@ -38,7 +39,9 @@ public class HechoController {
         if (hecho == null) throw new InvalidParameterException("body requerido");
         if (hecho.nombreColeccion() == null || hecho.nombreColeccion().isBlank())
             throw new InvalidParameterException("nombreColeccion es requerido");
-        return ResponseEntity.ok(fachadaFuente.agregar(hecho));
+
+        HechoDTO guardado = fachada.altaHecho(hecho);
+        return ResponseEntity.ok(guardado);
     }
 
     static record EstadoRequest(String estado) {}
@@ -94,4 +97,15 @@ public class HechoController {
         return ResponseEntity.accepted().body(pendiente);
     }
 
+    @PostMapping("/busqueda")
+    public ResponseEntity<Map<String, Object>> reindexBusqueda() {
+        int cantidad = fachada.reindexarTodosEnBusqueda();
+
+        Map<String, Object> body = Map.of(
+                "mensaje", "Reindexación lanzada",
+                "hechos_enviados", cantidad
+        );
+
+        return ResponseEntity.accepted().body(body);
+    }
 }
