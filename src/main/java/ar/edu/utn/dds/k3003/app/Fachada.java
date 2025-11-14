@@ -1,5 +1,6 @@
 package ar.edu.utn.dds.k3003.app;
 
+import ar.edu.utn.dds.k3003.clients.BusquedaProxy;
 import ar.edu.utn.dds.k3003.clients.PdiProxy;
 import ar.edu.utn.dds.k3003.clients.SolicitudesProxy;
 import ar.edu.utn.dds.k3003.dto.PdiProcesadorDTO;
@@ -28,7 +29,6 @@ public class Fachada implements FachadaFuente {
     private final ColeccionRepository coleccionRepo;
     private final HechoRepository hechoRepo;
 
-    private FachadaProcesadorPdI procesadorPdI;
     private final SolicitudesProxy solicitudesProxy;
 
     private final Counter coleccionesCreadas;
@@ -44,11 +44,16 @@ public class Fachada implements FachadaFuente {
     HechosPublisher publisher;
 
     private final PdiProxy pdiProxy;
+    private BusquedaProxy busquedaProxy;
 
     @Autowired
     public Fachada(ColeccionRepository coleccionRepository,
-                   HechoRepository hechoRepository, SolicitudesProxy solicitudesProxy,
-                   MeterRegistry meterRegistry, PdiProxy pdiProxy    ) {
+                   HechoRepository hechoRepository,
+                   SolicitudesProxy solicitudesProxy,
+                   MeterRegistry meterRegistry,
+                   PdiProxy pdiProxy,
+                   BusquedaProxy busquedaProxy) {
+
         this.coleccionRepo = coleccionRepository;
         this.hechoRepo = hechoRepository;
         this.solicitudesProxy = solicitudesProxy;
@@ -74,6 +79,7 @@ public class Fachada implements FachadaFuente {
 
         this.mqTiempoPublicar = Timer.builder("fuentes.mq.publicar.tiempo")
                 .description("Tiempo de publicar el mensaje en MQ").register(meterRegistry);
+
     }
 
 
@@ -205,13 +211,51 @@ public class Fachada implements FachadaFuente {
         hechoRepo.deleteAllInBatch();
         coleccionRepo.deleteAllInBatch();
     }
-    //pdi
-    @Override public void setProcesadorPdI(FachadaProcesadorPdI f) { this.procesadorPdI = f; }
+    @Override public void setProcesadorPdI(FachadaProcesadorPdI f) {
+    }
 
-    @Override public PdIDTO agregar(PdIDTO p) { return procesadorPdI.procesar(p); }
+    @Override
+    public PdIDTO agregar(PdIDTO p) {
+        if (p == null || p.hechoId() == null || p.hechoId().isBlank()) {
+            throw new IllegalArgumentException("hechoId es requerido");
+        }
 
-    public PdiProcesadorDTO recibirYEnviarPdi(PdiProcesadorDTO dto) {
-        return pdiProxy.crear(dto);
+        this.buscarHechoXId(p.hechoId());
+
+        PdiProcesadorDTO dto = new PdiProcesadorDTO();
+        dto.setHechoId(p.hechoId());
+        dto.setDescripcion(p.descripcion());
+        dto.setLugar(p.lugar());
+        dto.setMomento(p.momento());
+        dto.setContenido(p.contenido());
+        dto.setEtiquetas(p.etiquetas());
+
+        try {
+            pdiProxy.crear(dto);
+        } catch (Exception e) {
+            log.warn("[PDI] error al enviar a Procesador: {}", e.toString(), e);
+            throw new RuntimeException("No se pudo enviar el PDI a procesar", e);
+        }
+
+        return new PdIDTO(
+                p.id(),
+                p.hechoId(),
+                p.descripcion(),
+                p.lugar(),
+                p.momento(),
+                p.contenido(),
+                p.etiquetas()
+        );
+    }
+
+
+
+    public void recibirYEnviarPdi(PdiProcesadorDTO dto) {
+        try {
+            pdiProxy.crear(dto);   // dispara al Procesador, el worker hará el resto
+        } catch (Exception e) {
+            throw new RuntimeException("No se pudo enviar el PDI a procesar", e);
+        }
     }
 
 
@@ -236,7 +280,6 @@ public class Fachada implements FachadaFuente {
     }
 
 
-    // mensajeria
     public HechoDTO altaHecho(HechoDTO dto) {
         HechoDTO guardado = this.agregar(dto);
         var sample = Timer.start();
@@ -245,6 +288,9 @@ public class Fachada implements FachadaFuente {
             mqPublicacionesOk.increment();
             log.info("[mq] publicado Hecho id={} col='{}' titulo='{}'",
                     guardado.id(), guardado.nombreColeccion(), guardado.titulo());
+
+            busquedaProxy.indexarHecho(guardado);
+
             return guardado;
         } catch (Exception e) {
             mqPublicacionesError.increment();
@@ -254,6 +300,7 @@ public class Fachada implements FachadaFuente {
             sample.stop(mqTiempoPublicar);
         }
     }
+
 
     public HechoDTO altaHechoSinPublicar(HechoDTO dto) {
         var guardado = this.agregar(dto);

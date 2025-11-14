@@ -17,10 +17,8 @@ public class PdiControllerFuente {
 
     @PostMapping
     public ResponseEntity<?> recibirYProcesar(@RequestBody PdiProcesadorDTO body) {
-        var result = fachada.recibirYEnviarPdi(body);
-        if (result == null) {
-            return ResponseEntity.status(502).body("ProcesadorPdI no disponible o error al procesar");
-        }
-        return ResponseEntity.ok(result);
+        fachada.recibirYEnviarPdi(body);
+        return ResponseEntity.accepted()
+                .body("PDI recibido, se procesará de forma asíncrona");
     }
 }

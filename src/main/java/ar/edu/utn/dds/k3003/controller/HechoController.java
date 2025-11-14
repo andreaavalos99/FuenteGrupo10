@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import org.springframework.web.bind.annotation.*;
-
 import java.security.InvalidParameterException;
 
 @RestController
@@ -88,9 +86,12 @@ public class HechoController {
         if (dto == null) throw new InvalidParameterException("body requerido");
         if (dto.hechoId() == null || dto.hechoId().isBlank())
             throw new InvalidParameterException("hechoId es requerido");
+
         fachadaFuente.buscarHechoXId(dto.hechoId());
-        PdIDTO procesado = fachada.agregar(dto);
-        return ResponseEntity.ok(procesado);
+
+        PdIDTO pendiente = fachada.agregar(dto);
+
+        return ResponseEntity.accepted().body(pendiente);
     }
 
 }
