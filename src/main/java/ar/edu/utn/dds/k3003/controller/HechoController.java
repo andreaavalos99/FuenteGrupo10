@@ -98,14 +98,9 @@ public class HechoController {
     }
 
     @PostMapping("/busqueda")
-    public ResponseEntity<Map<String, Object>> reindexBusqueda() {
-        int cantidad = fachada.reindexarTodosEnBusqueda();
-
-        Map<String, Object> body = Map.of(
-                "mensaje", "Reindexación lanzada",
-                "hechos_enviados", cantidad
-        );
-
-        return ResponseEntity.accepted().body(body);
+    public ResponseEntity<List<HechoDTO>> reindexBusqueda() {
+        List<HechoDTO> enviados = fachada.reindexarTodosEnBusqueda();
+        return ResponseEntity.ok(enviados);
     }
+
 }

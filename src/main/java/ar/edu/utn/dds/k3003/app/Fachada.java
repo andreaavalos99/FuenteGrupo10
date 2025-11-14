@@ -313,24 +313,26 @@ public class Fachada implements FachadaFuente {
     }
 
     @Transactional(readOnly = true)
-    public int reindexarTodosEnBusqueda() {
+    public List<HechoDTO> reindexarTodosEnBusqueda() {
         var hechos = hechoRepo.findAll();
 
-        hechos.forEach(h -> {
-            HechoDTO dto = new HechoDTO(
-                    h.getId().toString(),
-                    h.getNombreColeccion(),
-                    h.getTitulo(),
-                    h.getEtiquetas(),
-                    h.getCategoria(),
-                    h.getUbicacion(),
-                    h.getFecha(),
-                    h.getOrigen()
-            );
-            busquedaProxy.indexarHecho(dto);
-        });
+        List<HechoDTO> dtos = hechos.stream()
+                .map(h -> new HechoDTO(
+                        h.getId().toString(),
+                        h.getNombreColeccion(),
+                        h.getTitulo(),
+                        h.getEtiquetas(),
+                        h.getCategoria(),
+                        h.getUbicacion(),
+                        h.getFecha(),
+                        h.getOrigen()
+                ))
+                .toList();
 
-        log.info("[BUSQUEDA] reindexados {} hechos en servicio de búsqueda", hechos.size());
-        return hechos.size();
+        dtos.forEach(busquedaProxy::indexarHecho);
+
+        log.info("[BUSQUEDA] reindexados {} hechos en servicio de búsqueda", dtos.size());
+        return dtos;
     }
+
     }
