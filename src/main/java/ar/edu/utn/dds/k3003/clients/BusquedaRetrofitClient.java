@@ -7,6 +7,6 @@ import retrofit2.http.POST;
 
 public interface BusquedaRetrofitClient {
 
-    @POST("hechos")
-    Call<Void> indexHecho(@Body HechoIndexDTO body);
+    @POST("events/hechoUpsert")
+    Call<Void> upsertHecho(@Body HechoIndexDTO body);
 }

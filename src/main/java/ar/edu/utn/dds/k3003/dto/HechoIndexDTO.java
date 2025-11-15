@@ -1,15 +1,14 @@
 package ar.edu.utn.dds.k3003.dto;
 
 
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public record HechoIndexDTO(
-        String idHecho,
-        String coleccion,
-        String titulo,
-        ar.edu.utn.dds.k3003.facades.dtos.CategoriaHechoEnum categoria,
-        String ubicacion,
-        java.time.LocalDateTime fecha,
-        String origen,
-        List<String> etiquetas
+        String id,
+        String nombreColeccion,
+        String titulo
 ) {}

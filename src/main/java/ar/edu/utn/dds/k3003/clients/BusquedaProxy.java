@@ -50,16 +50,11 @@ public class BusquedaProxy {
         HechoIndexDTO dto = new HechoIndexDTO(
                 hecho.id(),
                 hecho.nombreColeccion(),
-                hecho.titulo(),
-                hecho.categoria(),
-                hecho.ubicacion(),
-                hecho.fecha(),
-                hecho.origen(),
-                hecho.etiquetas()
+                hecho.titulo()
         );
 
         try {
-            Response<Void> r = api.indexHecho(dto).execute();
+            Response<Void> r = api.upsertHecho(dto).execute();
             if (!r.isSuccessful()) {
                 String body = null;
                 try { body = r.errorBody() != null ? r.errorBody().string() : null; } catch (Exception ignore) {}
