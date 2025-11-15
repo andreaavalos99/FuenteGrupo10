@@ -92,9 +92,8 @@ public class HechoController {
 
         fachadaFuente.buscarHechoXId(dto.hechoId());
 
-        PdIDTO pendiente = fachada.agregar(dto);
-
-        return ResponseEntity.accepted().body(pendiente);
+        PdIDTO procesado = fachada.agregar(dto);
+        return ResponseEntity.ok(procesado);
     }
 
     @PostMapping("/busqueda")
