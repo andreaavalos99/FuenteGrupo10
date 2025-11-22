@@ -50,7 +50,7 @@ public class PdiProxy {
 
     public PdiProcesadorDTO crear(PdiProcesadorDTO dto) {
         try {
-            Response<PdiProcesadorDTO> r = api.crear(dto).execute();
+            Response<PdiProcesadorDTO> r = api.crear(dto, true).execute();
             if (!r.isSuccessful() || r.body() == null) {
                 String body = null;
                 try { body = r.errorBody() != null ? r.errorBody().string() : null; } catch (Exception ignore) {}
@@ -63,5 +63,6 @@ public class PdiProxy {
             return null;
         }
     }
+
 
 }
