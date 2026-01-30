@@ -47,7 +47,7 @@ GET /coleccion/{nombre}/hechos
 POST /hecho
 
 Ejecución local
-git clone https://github.com/andreaavalos99/fuente-service.git
+git clone https://github.com/andreaavalos99/FuenteGrupo10.git
 cd fuente-service
 mvn spring-boot:run
 
@@ -68,3 +68,4 @@ Integración entre servicios
 Notas
 Pensado para integrarse con otros microservicios
 El código prioriza claridad y estructura
+
